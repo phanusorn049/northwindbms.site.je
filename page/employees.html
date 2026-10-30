@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F0F4F8">
+  <title>👤 พนักงาน | Northwind BMS</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/northwind.css">
+</head>
+<body>
+  <nav id="nav-tabs" aria-label="Northwind BMS pages"><a class="nav-tab" href="login.html">🔐 เข้าสู่ระบบ</a><a class="nav-tab" href="dashboard.html">📊 แดชบอร์ด</a><a class="nav-tab" href="products.html">📦 สินค้า</a><a class="nav-tab" href="product-form.html">➕ เพิ่ม/แก้ไขสินค้า</a><a class="nav-tab" href="categories.html">🗂 หมวดหมู่</a><a class="nav-tab" href="orders.html">🛒 คำสั่งซื้อ</a><a class="nav-tab" href="order-detail.html">🧾 รายละเอียดคำสั่งซื้อ</a><a class="nav-tab" href="customers.html">👥 ลูกค้า</a><a class="nav-tab" href="suppliers.html">🏭 ผู้จัดจำหน่าย</a><a class="nav-tab active" href="employees.html" aria-current="page">👤 พนักงาน</a><a class="nav-tab" href="shippers.html">🚚 บริษัทขนส่ง</a><a class="nav-tab" href="reports.html">📈 รายงาน</a></nav>
+  <div id="employees" class="screen active">
+  <div class="shell">
+    <nav class="sidebar">
+      <div class="sidebar-logo"><div class="logo-mark">NW</div><div><div class="logo-text">Northwind BMS</div><div class="logo-sub">ระบบจัดการธุรกิจ</div></div></div>
+      <div class="nav"><div class="nav-group"><div class="nav-label">บุคลากร</div><button class="nav-item active"><span class="nav-icon">👤</span> พนักงาน</button></div></div>
+      <div class="sidebar-footer"><div class="user-card"><div class="avatar">วช</div><div><div class="user-name">วชิรา ล.</div><div class="user-role">ผู้ดูแลระบบ</div></div></div></div>
+    </nav>
+    <div class="main">
+      <div class="topbar">
+        <div class="breadcrumb"><span>หน้าหลัก</span><span class="sep">›</span><span class="cur">พนักงาน</span></div>
+      </div>
+      <div class="page-content container-fluid">
+        <div class="page-header">
+          <div><div class="page-title">รายชื่อพนักงาน</div><div class="page-desc">10 คน</div></div>
+          <button class="btn btn-primary">➕ เพิ่มพนักงาน</button>
+        </div>
+        <div class="emp-grid">
+          <div class="emp-card"><div class="emp-avatar">ND</div><div class="emp-name">Nancy Davolio</div><div class="emp-title">พนักงานขาย</div><div class="emp-meta">เกิด: 8 ธ.ค. 2491</div></div>
+          <div class="emp-card"><div class="emp-avatar" style="background:#7C3AED">AF</div><div class="emp-name">Andrew Fuller</div><div class="emp-title">ผู้จัดการฝ่ายขาย</div><div class="emp-meta">เกิด: 19 ก.พ. 2495</div></div>
+          <div class="emp-card"><div class="emp-avatar" style="background:#059669">JL</div><div class="emp-name">Janet Leverling</div><div class="emp-title">พนักงานขาย</div><div class="emp-meta">เกิด: 30 ส.ค. 2506</div></div>
+          <div class="emp-card"><div class="emp-avatar" style="background:#D97706">MP</div><div class="emp-name">Margaret Peacock</div><div class="emp-title">พนักงานขาย</div><div class="emp-meta">เกิด: 19 ก.ย. 2480</div></div>
+          <div class="emp-card"><div class="emp-avatar" style="background:#DC2626">SB</div><div class="emp-name">Steven Buchanan</div><div class="emp-title">ผู้จัดการฝ่ายขาย</div><div class="emp-meta">เกิด: 4 มี.ค. 2498</div></div>
+          <div class="emp-card"><div class="emp-avatar" style="background:#0891B2">MS</div><div class="emp-name">Michael Suyama</div><div class="emp-title">พนักงานขาย</div><div class="emp-meta">เกิด: 2 ก.ค. 2503</div></div>
+          <div class="emp-card"><div class="emp-avatar" style="background:#65A30D">RK</div><div class="emp-name">Robert King</div><div class="emp-title">พนักงานขาย</div><div class="emp-meta">เกิด: 29 พ.ค. 2503</div></div>
+          <div class="emp-card"><div class="emp-avatar" style="background:#C026D3">LC</div><div class="emp-name">Laura Callahan</div><div class="emp-title">ผู้ช่วยฝ่ายขาย</div><div class="emp-meta">เกิด: 9 ม.ค. 2501</div></div>
+          <div class="emp-card"><div class="emp-avatar" style="background:#9333EA">AD</div><div class="emp-name">Anne Dodsworth</div><div class="emp-title">พนักงานขาย</div><div class="emp-meta">เกิด: 27 ม.ค. 2509</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ -->
+  <script src="../assets/app.js" defer></script>
+</body>
+</html>

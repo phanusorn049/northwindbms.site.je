@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F0F4F8">
+  <title>📈 รายงาน | Northwind BMS</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/northwind.css">
+</head>
+<body>
+  <nav id="nav-tabs" aria-label="Northwind BMS pages"><a class="nav-tab" href="login.html">🔐 เข้าสู่ระบบ</a><a class="nav-tab" href="dashboard.html">📊 แดชบอร์ด</a><a class="nav-tab" href="products.html">📦 สินค้า</a><a class="nav-tab" href="product-form.html">➕ เพิ่ม/แก้ไขสินค้า</a><a class="nav-tab" href="categories.html">🗂 หมวดหมู่</a><a class="nav-tab" href="orders.html">🛒 คำสั่งซื้อ</a><a class="nav-tab" href="order-detail.html">🧾 รายละเอียดคำสั่งซื้อ</a><a class="nav-tab" href="customers.html">👥 ลูกค้า</a><a class="nav-tab" href="suppliers.html">🏭 ผู้จัดจำหน่าย</a><a class="nav-tab" href="employees.html">👤 พนักงาน</a><a class="nav-tab" href="shippers.html">🚚 บริษัทขนส่ง</a><a class="nav-tab active" href="reports.html" aria-current="page">📈 รายงาน</a></nav>
+  <div id="reports" class="screen active">
+  <div class="shell">
+    <nav class="sidebar">
+      <div class="sidebar-logo"><div class="logo-mark">NW</div><div><div class="logo-text">Northwind BMS</div><div class="logo-sub">ระบบจัดการธุรกิจ</div></div></div>
+      <div class="nav"><div class="nav-group"><div class="nav-label">วิเคราะห์</div><button class="nav-item active"><span class="nav-icon">📈</span> รายงาน</button></div></div>
+      <div class="sidebar-footer"><div class="user-card"><div class="avatar">วช</div><div><div class="user-name">วชิรา ล.</div><div class="user-role">ผู้ดูแลระบบ</div></div></div></div>
+    </nav>
+    <div class="main">
+      <div class="topbar">
+        <div class="breadcrumb"><span>หน้าหลัก</span><span class="sep">›</span><span class="cur">รายงานและวิเคราะห์</span></div>
+        <div class="topbar-right">
+          <select class="filter-select" style="font-size:12px">
+            <option>ปี 2540</option><option>ปี 2539</option><option>ทุกปี</option>
+          </select>
+          <button class="btn btn-outline btn-sm">📥 ส่งออก Excel</button>
+          <button class="btn btn-outline btn-sm">📄 ส่งออก PDF</button>
+        </div>
+      </div>
+      <div class="page-content container-fluid">
+        <div class="page-title" style="margin-bottom:16px">รายงานและวิเคราะห์ข้อมูล</div>
+        <div class="tab-list">
+          <button class="tab-item active">📊 ภาพรวมการขาย</button>
+          <button class="tab-item">📦 ตามสินค้า</button>
+          <button class="tab-item">👥 ตามลูกค้า</button>
+          <button class="tab-item">👤 ตามพนักงาน</button>
+        </div>
+        <!-- KPIs -->
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xxl-4 g-3 mb-3">
+          <div class="kpi-card col"><div><div class="kpi-label">รายได้รวม (ประมาณ)</div><div class="kpi-value" style="font-size:22px">฿2.45M</div><div class="kpi-trend up">▲ 8.4%</div></div><div class="kpi-icon" style="background:#DCFCE7">💰</div></div>
+          <div class="kpi-card col"><div><div class="kpi-label">คำสั่งซื้อทั้งหมด</div><div class="kpi-value">196</div><div class="kpi-trend up">▲ 12%</div></div><div class="kpi-icon" style="background:#DBEAFE">📋</div></div>
+          <div class="kpi-card col"><div><div class="kpi-label">ค่าเฉลี่ยต่อออร์เดอร์</div><div class="kpi-value" style="font-size:22px">฿1,250</div></div><div class="kpi-icon" style="background:#FEF3C7">📉</div></div>
+          <div class="kpi-card col"><div><div class="kpi-label">บริษัทขนส่งยอดนิยม</div><div class="kpi-value" style="font-size:15px;margin-top:6px">United Package</div><div class="kpi-trend" style="color:var(--ink-3)">74 ครั้ง</div></div><div class="kpi-icon" style="background:#F3E8FF">🚚</div></div>
+        </div>
+        <div class="row row-cols-1 row-cols-xl-2 g-3 mb-3">
+          <div class="card col">
+            <div class="card-title">📈 แนวโน้มยอดขายรายเดือน</div>
+            <div class="bar-chart" style="height:100px">
+              <div class="bar-wrap"><div class="bar-col" style="height:30px;background:#93C5FD"></div><div class="bar-lbl">เม.ย</div></div>
+              <div class="bar-wrap"><div class="bar-col" style="height:45px;background:#93C5FD"></div><div class="bar-lbl">พ.ค</div></div>
+              <div class="bar-wrap"><div class="bar-col" style="height:55px;background:#93C5FD"></div><div class="bar-lbl">มิ.ย</div></div>
+              <div class="bar-wrap"><div class="bar-col" style="height:70px"></div><div class="bar-lbl">ก.ค</div></div>
+              <div class="bar-wrap"><div class="bar-col" style="height:65px"></div><div class="bar-lbl">ส.ค</div></div>
+              <div class="bar-wrap"><div class="bar-col" style="height:80px"></div><div class="bar-lbl">ก.ย</div></div>
+              <div class="bar-wrap"><div class="bar-col" style="height:90px"></div><div class="bar-lbl">ต.ค</div></div>
+              <div class="bar-wrap"><div class="bar-col" style="height:100px;background:#1D4ED8"></div><div class="bar-lbl">พ.ย</div></div>
+              <div class="bar-wrap"><div class="bar-col" style="height:85px"></div><div class="bar-lbl">ธ.ค</div></div>
+            </div>
+          </div>
+          <div class="card col">
+            <div class="card-title">🏆 สินค้าขายดีสูงสุด</div>
+            <div class="prog-row"><div class="prog-label"><span>ชาไทย</span><span style="font-weight:700;font-family:'IBM Plex Mono'">324 หน่วย</span></div><div class="prog-bar"><div class="prog-fill" style="width:90%"></div></div></div>
+            <div class="prog-row"><div class="prog-label"><span>น้ำซุปชาม</span><span style="font-weight:700;font-family:'IBM Plex Mono'">290 หน่วย</span></div><div class="prog-bar"><div class="prog-fill" style="width:80%"></div></div></div>
+            <div class="prog-row"><div class="prog-label"><span>แมนจิมัป</span><span style="font-weight:700;font-family:'IBM Plex Mono'">218 หน่วย</span></div><div class="prog-bar"><div class="prog-fill" style="width:60%"></div></div></div>
+            <div class="prog-row"><div class="prog-label"><span>ลูกอมผลไม้</span><span style="font-weight:700;font-family:'IBM Plex Mono'">198 หน่วย</span></div><div class="prog-bar"><div class="prog-fill" style="width:54%"></div></div></div>
+            <div class="prog-row"><div class="prog-label"><span>แซนด์วิชฟิงเกอร์</span><span style="font-weight:700;font-family:'IBM Plex Mono'">156 หน่วย</span></div><div class="prog-bar"><div class="prog-fill" style="width:43%"></div></div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🥇 ลูกค้าที่ซื้อสูงสุด (Top 5)</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>อันดับ</th><th>บริษัท</th><th>ประเทศ</th><th>จำนวนออร์เดอร์</th><th>สัดส่วน</th></tr></thead>
+              <tbody>
+                <tr><td style="font-weight:700;color:var(--warn)">🥇</td><td style="font-weight:600">Ernst Handel</td><td>🇦🇹 ออสเตรีย</td><td>10</td><td><div class="prog-bar" style="width:100px"><div class="prog-fill" style="width:90%"></div></div></td></tr>
+                <tr><td style="font-weight:700;color:var(--ink-2)">🥈</td><td style="font-weight:600">Save-a-lot Markets</td><td>🇺🇸 สหรัฐอเมริกา</td><td>9</td><td><div class="prog-bar" style="width:100px"><div class="prog-fill" style="width:81%"></div></div></td></tr>
+                <tr><td style="font-weight:700;color:var(--warn)">🥉</td><td style="font-weight:600">QUICK-Stop</td><td>🇩🇪 เยอรมนี</td><td>8</td><td><div class="prog-bar" style="width:100px"><div class="prog-fill" style="width:72%"></div></div></td></tr>
+                <tr><td>4</td><td style="font-weight:600">Rattlesnake Canyon</td><td>🇺🇸 สหรัฐอเมริกา</td><td>7</td><td><div class="prog-bar" style="width:100px"><div class="prog-fill" style="width:63%"></div></div></td></tr>
+                <tr><td>5</td><td style="font-weight:600">Hungry Owl</td><td>🇮🇪 ไอร์แลนด์</td><td>6</td><td><div class="prog-bar" style="width:100px"><div class="prog-fill" style="width:54%"></div></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+  <script src="../assets/app.js" defer></script>
+</body>
+</html>

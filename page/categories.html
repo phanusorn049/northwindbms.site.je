@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#F0F4F8">
+  <title>🗂 หมวดหมู่ | Northwind BMS</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../assets/northwind.css">
+</head>
+<body>
+  <nav id="nav-tabs" aria-label="Northwind BMS pages"><a class="nav-tab" href="login.html">🔐 เข้าสู่ระบบ</a><a class="nav-tab" href="dashboard.html">📊 แดชบอร์ด</a><a class="nav-tab" href="products.html">📦 สินค้า</a><a class="nav-tab" href="product-form.html">➕ เพิ่ม/แก้ไขสินค้า</a><a class="nav-tab active" href="categories.html" aria-current="page">🗂 หมวดหมู่</a><a class="nav-tab" href="orders.html">🛒 คำสั่งซื้อ</a><a class="nav-tab" href="order-detail.html">🧾 รายละเอียดคำสั่งซื้อ</a><a class="nav-tab" href="customers.html">👥 ลูกค้า</a><a class="nav-tab" href="suppliers.html">🏭 ผู้จัดจำหน่าย</a><a class="nav-tab" href="employees.html">👤 พนักงาน</a><a class="nav-tab" href="shippers.html">🚚 บริษัทขนส่ง</a><a class="nav-tab" href="reports.html">📈 รายงาน</a></nav>
+  <div id="categories" class="screen active">
+  <div class="shell">
+    <nav class="sidebar">
+      <div class="sidebar-logo"><div class="logo-mark">NW</div><div><div class="logo-text">Northwind BMS</div><div class="logo-sub">ระบบจัดการธุรกิจ</div></div></div>
+      <div class="nav"><div class="nav-group"><div class="nav-label">คลังสินค้า</div><button class="nav-item"><span class="nav-icon">📦</span> สินค้า</button><button class="nav-item active"><span class="nav-icon">🗂</span> หมวดหมู่สินค้า</button></div></div>
+      <div class="sidebar-footer"><div class="user-card"><div class="avatar">วช</div><div><div class="user-name">วชิรา ล.</div><div class="user-role">ผู้ดูแลระบบ</div></div></div></div>
+    </nav>
+    <div class="main">
+      <div class="topbar">
+        <div class="breadcrumb"><span>หน้าหลัก</span><span class="sep">›</span><span class="cur">หมวดหมู่สินค้า</span></div>
+      </div>
+      <div class="page-content container-fluid">
+        <div class="page-header">
+          <div><div class="page-title">หมวดหมู่สินค้า</div><div class="page-desc">9 หมวดหมู่</div></div>
+          <button class="btn btn-primary">➕ เพิ่มหมวดหมู่</button>
+        </div>
+        <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+          <div class="cat-card col"><div><div class="cat-icon">🍹</div><div class="cat-name">เครื่องดื่ม</div><div class="cat-desc">Soft drinks, coffees, teas, beers</div><div class="cat-count">12 รายการสินค้า</div></div><div style="display:flex;gap:4px"><button class="btn btn-outline btn-sm">✏️</button></div></div>
+          <div class="cat-card col"><div><div class="cat-icon">🧂</div><div class="cat-name">เครื่องปรุงรส</div><div class="cat-desc">Sweet and savory sauces</div><div class="cat-count">13 รายการสินค้า</div></div><div style="display:flex;gap:4px"><button class="btn btn-outline btn-sm">✏️</button></div></div>
+          <div class="cat-card col"><div><div class="cat-icon">🍬</div><div class="cat-name">ขนมหวาน</div><div class="cat-desc">Desserts, candies, sweet breads</div><div class="cat-count">7 รายการสินค้า</div></div><div style="display:flex;gap:4px"><button class="btn btn-outline btn-sm">✏️</button></div></div>
+          <div class="cat-card col"><div><div class="cat-icon">🧀</div><div class="cat-name">ผลิตภัณฑ์นม</div><div class="cat-desc">Cheeses, butter, cream</div><div class="cat-count">10 รายการสินค้า</div></div><div style="display:flex;gap:4px"><button class="btn btn-outline btn-sm">✏️</button></div></div>
+          <div class="cat-card col"><div><div class="cat-icon">🥩</div><div class="cat-name">เนื้อสัตว์</div><div class="cat-desc">Prepared meats</div><div class="cat-count">6 รายการสินค้า</div></div><div style="display:flex;gap:4px"><button class="btn btn-outline btn-sm">✏️</button></div></div>
+          <div class="cat-card col"><div><div class="cat-icon">🐟</div><div class="cat-name">อาหารทะเล</div><div class="cat-desc">Seaweed and fish</div><div class="cat-count">8 รายการสินค้า</div></div><div style="display:flex;gap:4px"><button class="btn btn-outline btn-sm">✏️</button></div></div>
+          <div class="cat-card col"><div><div class="cat-icon">🌾</div><div class="cat-name">ธัญพืช/ซีเรียล</div><div class="cat-desc">Breads, crackers, pasta</div><div class="cat-count">7 รายการสินค้า</div></div><div style="display:flex;gap:4px"><button class="btn btn-outline btn-sm">✏️</button></div></div>
+          <div class="cat-card col"><div><div class="cat-icon">🍄</div><div class="cat-name">อาหารพิเศษ</div><div class="cat-desc">Dried fruit, bean curd</div><div class="cat-count">12 รายการสินค้า</div></div><div style="display:flex;gap:4px"><button class="btn btn-outline btn-sm">✏️</button></div></div>
+          <div class="cat-card col"><div><div class="cat-icon">👟</div><div class="cat-name">กีฬา</div><div class="cat-desc">Sporting goods</div><div class="cat-count" style="color:var(--warn)">1 รายการ (ผิดปกติ)</div></div><div style="display:flex;gap:4px"><button class="btn btn-outline btn-sm">✏️</button></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════ -->
+  <script src="../assets/app.js" defer></script>
+</body>
+</html>
