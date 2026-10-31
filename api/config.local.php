@@ -5,5 +5,5 @@ return [
     'port' => 3306,
     'database' => 'if0_43314520_northwindbms',
     'username' => 'if0_43314520',
-    'password' => '******',
+    'password' => 'XE7tRCUJUE26',
 ];
