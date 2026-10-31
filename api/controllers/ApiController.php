@@ -23,8 +23,114 @@ session_set_cookie_params([
 ]);
 session_start();
 
+function jwtConfig(): array
+{
+    $path = dirname(__DIR__) . '/config.local.php';
+    if (!is_file($path)) {
+        respond(['success' => false, 'message' => 'Database and JWT configuration are required'], 503);
+    }
+    $config = require $path;
+    $secret = (string) ($config['jwt_secret'] ?? getenv('JWT_SECRET') ?: '');
+    if (strlen($secret) < 32) {
+        respond(['success' => false, 'message' => 'JWT_SECRET must be configured with at least 32 characters'], 503);
+    }
+    $ttl = (int) ($config['token_ttl'] ?? getenv('JWT_TTL') ?: 28800);
+    return ['jwt_secret' => $secret, 'token_ttl' => max(60, $ttl)];
+}
+
+function base64UrlEncode(string $value): string
+{
+    return rtrim(strtr(base64_encode($value), '+/', '-_'), '=');
+}
+
+function base64UrlDecode(string $value): string
+{
+    $decoded = base64_decode(strtr($value, '-_', '+/'), true);
+    return $decoded === false ? '' : $decoded;
+}
+
+function formatV1Record(array $row, string $resource): array
+{
+    $fields = [
+        'products' => [
+            'id' => 'product_id', 'name' => 'product_name', 'supplier' => 'supplier_name',
+            'category' => 'category_name', 'unit' => 'quantity_per_unit', 'price' => 'unit_price',
+        ],
+        'categories' => ['id' => 'category_id', 'name' => 'category_name'],
+        'customers' => ['id' => 'customer_id', 'name' => 'company_name', 'contact' => 'contact_name'],
+        'suppliers' => ['id' => 'supplier_id', 'name' => 'company_name', 'contact' => 'contact_name'],
+        'employees' => ['id' => 'employee_id'],
+        'shippers' => ['id' => 'shipper_id', 'name' => 'company_name'],
+        'orders' => [
+            'id' => 'order_id', 'customer' => 'company_name', 'employee' => 'employee_name',
+            'shipper_id' => 'ship_via', 'shipper' => 'shipper_name',
+        ],
+        'order-details' => ['product_id' => 'product_id', 'product_name' => 'product_name'],
+    ];
+    foreach ($fields[$resource] ?? [] as $old => $new) {
+        if (array_key_exists($old, $row)) {
+            $row[$new] = $row[$old];
+            if ($old !== $new) {
+                unset($row[$old]);
+            }
+        }
+    }
+    return $row;
+}
+
+function formatV1Data(mixed $data, string $resource): mixed
+{
+    if (!is_array($data)) {
+        return $data;
+    }
+    if (isset($data['items']) && is_array($data['items'])) {
+        $data = formatV1Record($data, $resource);
+        $data['items'] = array_map(static fn(array $item): array => formatV1Record($item, 'order-details'), $data['items']);
+        return $data;
+    }
+    if (array_is_list($data)) {
+        return array_map(static fn(array $row): array => formatV1Record($row, $resource), $data);
+    }
+    if (isset($data['id']) || isset($data['product_id'])) {
+        return formatV1Record($data, $resource);
+    }
+    return $data;
+}
+
+function createJwt(int $userId): string
+{
+    $config = jwtConfig();
+    $header = base64UrlEncode((string) json_encode(['alg' => 'HS256', 'typ' => 'JWT']));
+    $payload = base64UrlEncode((string) json_encode([
+        'sub' => $userId,
+        'iat' => time(),
+        'exp' => time() + $config['token_ttl'],
+    ]));
+    $signature = base64UrlEncode(hash_hmac('sha256', $header . '.' . $payload, $config['jwt_secret'], true));
+    return $header . '.' . $payload . '.' . $signature;
+}
+
 function respond(array $body, int $status = 200): never
 {
+    if (!empty($GLOBALS['northwind_api_v1'])) {
+        if (array_key_exists('data', $body)) {
+            $resource = (string) ($_GET['resource'] ?? '');
+            if (isset($body['data']['items']) || $resource === 'orders' || $resource === 'order-details'
+                || in_array($resource, ['products', 'categories', 'customers', 'suppliers', 'employees', 'shippers'], true)) {
+                $body['data'] = formatV1Data($body['data'], $resource);
+            }
+            if ($resource === 'orders' && is_array($body['data']) && isset($body['data']['order_id'], $body['data']['items'])) {
+                $items = $body['data']['items'];
+                unset($body['data']['items']);
+                $body['data'] = ['order' => $body['data'], 'items' => $items];
+            }
+        }
+        $body['status'] = (bool) ($body['success'] ?? false);
+        unset($body['success']);
+        if (isset($GLOBALS['northwind_api_meta'])) {
+            $body['meta'] = $GLOBALS['northwind_api_meta'];
+        }
+    }
     Response::json($body, $status);
 }
 
@@ -71,11 +177,66 @@ function requestBody(): array
     if (!is_array($body)) {
         respond(['success' => false, 'message' => 'รูปแบบข้อมูลไม่ถูกต้อง'], 400);
     }
+    if (!empty($GLOBALS['northwind_api_v1']) && !empty($_GET['resource'])) {
+        $fields = [
+            'products' => [
+                'product_name' => 'c_ProductName',
+                'supplier_id' => 'i_SupplierID',
+                'category_id' => 'i_CategoryID',
+                'quantity_per_unit' => 'c_Unit',
+                'unit_price' => 'i_Price',
+            ],
+            'categories' => [
+                'category_name' => 'c_CategoryName',
+                'description' => 'c_Description',
+            ],
+            'customers' => [
+                'company_name' => 'c_customername',
+                'contact_name' => 'c_contactname',
+                'address' => 'c_address',
+                'city' => 'c_city',
+                'postal_code' => 'c_postalcode',
+                'country' => 'c_country',
+            ],
+            'suppliers' => [
+                'company_name' => 'c_SupplierName',
+                'contact_name' => 'c_ContactName',
+                'postal_code' => 'c_PostalCode',
+                'country' => 'c_Country',
+                'phone' => 'c_Phone',
+                'address' => 'c_Address',
+                'city' => 'c_City',
+            ],
+            'employees' => [
+                'first_name' => 'c_FirstName',
+                'last_name' => 'c_LastName',
+                'birth_date' => 'c_BirthDate',
+                'photo' => 'c_Photo',
+                'notes' => 'c_Notes',
+            ],
+            'shippers' => [
+                'company_name' => 'c_ShipperName',
+                'phone' => 'c_Phone',
+            ],
+        ];
+        foreach ($fields[$_GET['resource']] ?? [] as $input => $databaseField) {
+            if (array_key_exists($input, $body)) {
+                $body[$databaseField] = $body[$input];
+            }
+        }
+        if ($_GET['resource'] === 'orders' && array_key_exists('ship_via', $body)) {
+            $body['shipper_id'] = $body['ship_via'];
+        }
+    }
     return $body;
 }
 
 function requireLogin(): void
 {
+    if (!empty($GLOBALS['northwind_api_v1'])) {
+        currentUser();
+        return;
+    }
     if (!isset($_SESSION['user_id'])) {
         respond(['success' => false, 'message' => 'กรุณาเข้าสู่ระบบ'], 401);
     }
@@ -83,6 +244,9 @@ function requireLogin(): void
 
 function requireCsrf(): void
 {
+    if (!empty($GLOBALS['northwind_api_v1'])) {
+        return;
+    }
     $provided = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
     $expected = $_SESSION['csrf_token'] ?? '';
     if (!is_string($provided) || $expected === '' || !hash_equals($expected, $provided)) {
@@ -92,6 +256,36 @@ function requireCsrf(): void
 
 function currentUser(): array
 {
+    if (!empty($GLOBALS['northwind_api_v1'])) {
+        $authorization = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+        if (!preg_match('/^Bearer\s+([A-Za-z0-9._-]+)$/i', $authorization, $matches)) {
+            respond(['success' => false, 'message' => 'Authorization Bearer token is required'], 401);
+        }
+        $parts = explode('.', $matches[1]);
+        if (count($parts) !== 3) {
+            respond(['success' => false, 'message' => 'Invalid or expired token'], 401);
+        }
+        [$header, $payload, $signature] = $parts;
+        $config = jwtConfig();
+        $expectedSignature = base64UrlEncode(hash_hmac('sha256', $header . '.' . $payload, $config['jwt_secret'], true));
+        $decodedHeader = json_decode(base64UrlDecode($header), true);
+        $decodedPayload = json_decode(base64UrlDecode($payload), true);
+        if (!is_array($decodedHeader) || ($decodedHeader['alg'] ?? '') !== 'HS256'
+            || !is_array($decodedPayload) || !hash_equals($expectedSignature, $signature)
+            || (int) ($decodedPayload['exp'] ?? 0) <= time()
+            || (int) ($decodedPayload['sub'] ?? 0) < 1) {
+            respond(['success' => false, 'message' => 'Invalid or expired token'], 401);
+        }
+        $statement = db()->prepare('SELECT id, username, display_name FROM users WHERE id = :id');
+        $statement->execute([':id' => (int) $decodedPayload['sub']]);
+        $user = $statement->fetch();
+        if (!$user) {
+            respond(['success' => false, 'message' => 'User account no longer exists'], 401);
+        }
+        $user['id'] = (int) $user['id'];
+        $user['role'] = 'admin';
+        return $user;
+    }
     return [
         'id' => (int) $_SESSION['user_id'],
         'username' => (string) $_SESSION['username'],
@@ -215,7 +409,7 @@ function entityRows(string $resource, array $definition): array
     $statement = db()->prepare($definition['select']);
     $statement->execute();
     $rows = $statement->fetchAll();
-    $query = trim((string) ($_GET['q'] ?? ''));
+    $query = trim((string) ($_GET['search'] ?? $_GET['q'] ?? ''));
     if ($query !== '') {
         $needle = function_exists('mb_strtolower') ? mb_strtolower($query, 'UTF-8') : strtolower($query);
         $rows = array_values(array_filter($rows, static function (array $row) use ($definition, $needle): bool {
@@ -228,6 +422,16 @@ function entityRows(string $resource, array $definition): array
             }
             return false;
         }));
+    }
+    if (!empty($GLOBALS['northwind_api_v1']) && empty($_GET['id'])) {
+        $sort = strtolower((string) ($_GET['sort'] ?? 'desc')) === 'asc' ? 1 : -1;
+        usort($rows, static fn(array $left, array $right): int => ((int) $left['id'] <=> (int) $right['id']) * $sort);
+        $limit = min(100, max(1, (int) ($_GET['limit'] ?? 20)));
+        $total = count($rows);
+        $pages = max(1, (int) ceil($total / $limit));
+        $pageNumber = min(max(1, (int) ($_GET['page'] ?? 1)), $pages);
+        $GLOBALS['northwind_api_meta'] = ['page' => $pageNumber, 'limit' => $limit, 'total' => $total];
+        $rows = array_slice($rows, ($pageNumber - 1) * $limit, $limit);
     }
     return $rows;
 }
@@ -477,6 +681,90 @@ function createOrder(): void
     }
 }
 
+function updateOrder(?string $id): void
+{
+    if ($id === null || !ctype_digit($id) || (int) $id < 1) {
+        respond(['success' => false, 'message' => 'Order ID is invalid'], 400);
+    }
+    $payload = requestBody();
+    $fields = [
+        'customer_id' => ['i_CustomerID', 'tb_customers', 'i_customerid'],
+        'employee_id' => ['i_EmployeeID', 'tb_employees', 'i_EmployeeID'],
+        'shipper_id' => ['i_ShipperID', 'tb_shippers', 'i_ShipperID'],
+    ];
+    $updates = [];
+    foreach ($fields as $input => [$column, $table, $key]) {
+        if (!array_key_exists($input, $payload)) {
+            continue;
+        }
+        $value = filter_var($payload[$input], FILTER_VALIDATE_INT);
+        if ($value === false || $value < 1) {
+            respond(['success' => false, 'message' => "$input must be a positive integer"], 422);
+        }
+        $reference = db()->prepare("SELECT 1 FROM $table WHERE $key = :id");
+        $reference->execute([':id' => $value]);
+        if (!$reference->fetchColumn()) {
+            respond(['success' => false, 'message' => "The selected $input does not exist"], 422);
+        }
+        $updates[$column] = $value;
+    }
+    if (array_key_exists('order_date', $payload)) {
+        $orderDate = trim((string) $payload['order_date']);
+        $date = DateTime::createFromFormat('Y-m-d', $orderDate);
+        if (!$date || $date->format('Y-m-d') !== $orderDate) {
+            respond(['success' => false, 'message' => 'order_date must use YYYY-MM-DD'], 422);
+        }
+        $updates['c_OrderDate'] = $orderDate;
+    }
+    if (!$updates) {
+        respond(['success' => false, 'message' => 'Provide at least one order field to update'], 422);
+    }
+    $assignments = array_map(static fn(string $column): string => "$column = :$column", array_keys($updates));
+    $statement = db()->prepare(sprintf(
+        'UPDATE tb_orders SET %s WHERE i_OrderID = :order_id',
+        implode(', ', $assignments)
+    ));
+    foreach ($updates as $column => $value) {
+        $statement->bindValue(':' . $column, $value);
+    }
+    $statement->bindValue(':order_id', (int) $id, PDO::PARAM_INT);
+    $statement->execute();
+    if ($statement->rowCount() === 0) {
+        $exists = db()->prepare('SELECT 1 FROM tb_orders WHERE i_OrderID = :id');
+        $exists->execute([':id' => (int) $id]);
+        if (!$exists->fetchColumn()) {
+            respond(['success' => false, 'message' => 'Order not found'], 404);
+        }
+    }
+    respond(['success' => true, 'message' => 'Order updated']);
+}
+
+function deleteOrder(?string $id): void
+{
+    if ($id === null || !ctype_digit($id) || (int) $id < 1) {
+        respond(['success' => false, 'message' => 'Order ID is invalid'], 400);
+    }
+    $connection = db();
+    $connection->beginTransaction();
+    try {
+        $details = $connection->prepare('DELETE FROM tb_orderdetails WHERE i_OrderID = :id');
+        $details->execute([':id' => (int) $id]);
+        $order = $connection->prepare('DELETE FROM tb_orders WHERE i_OrderID = :id');
+        $order->execute([':id' => (int) $id]);
+        if ($order->rowCount() === 0) {
+            $connection->rollBack();
+            respond(['success' => false, 'message' => 'Order not found'], 404);
+        }
+        $connection->commit();
+    } catch (Throwable $error) {
+        if ($connection->inTransaction()) {
+            $connection->rollBack();
+        }
+        throw $error;
+    }
+    respond(['success' => true, 'message' => 'Order deleted']);
+}
+
 function reportData(): array
 {
     $connection = db();
@@ -598,6 +886,17 @@ function handleApiRequest(): void
         if (!$user || !password_verify($password, $user['password_hash'])) {
             respond(['success' => false, 'message' => 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง'], 401);
         }
+        if (!empty($GLOBALS['northwind_api_v1'])) {
+            respond(['success' => true, 'data' => [
+                'token' => createJwt((int) $user['id']),
+                'user' => [
+                    'id' => (int) $user['id'],
+                    'username' => (string) $user['username'],
+                    'display_name' => (string) $user['display_name'],
+                    'role' => 'admin',
+                ],
+            ]]);
+        }
         session_regenerate_id(true);
         $_SESSION['user_id'] = (int) $user['id'];
         $_SESSION['username'] = (string) $user['username'];
@@ -609,6 +908,9 @@ function handleApiRequest(): void
     if ($method === 'POST' && $action === 'change-password') {
         requireLogin();
         requireCsrf();
+        $userId = !empty($GLOBALS['northwind_api_v1'])
+            ? (int) currentUser()['id']
+            : (int) $_SESSION['user_id'];
         $payload = requestBody();
         $oldPassword = (string) ($payload['old_password'] ?? '');
         $newPassword = (string) ($payload['new_password'] ?? '');
@@ -616,7 +918,7 @@ function handleApiRequest(): void
             respond(['success' => false, 'message' => 'รหัสผ่านใหม่ต้องมีอย่างน้อย 10 ตัวอักษร'], 422);
         }
         $statement = db()->prepare('SELECT password_hash FROM users WHERE id = :id');
-        $statement->execute([':id' => (int) $_SESSION['user_id']]);
+        $statement->execute([':id' => $userId]);
         $hash = $statement->fetchColumn();
         if (!is_string($hash) || !password_verify($oldPassword, $hash)) {
             respond(['success' => false, 'message' => 'รหัสผ่านปัจจุบันไม่ถูกต้อง'], 401);
@@ -624,13 +926,16 @@ function handleApiRequest(): void
         $statement = db()->prepare('UPDATE users SET password_hash = :password_hash WHERE id = :id');
         $statement->execute([
             ':password_hash' => password_hash($newPassword, PASSWORD_DEFAULT),
-            ':id' => (int) $_SESSION['user_id'],
+            ':id' => $userId,
         ]);
         respond(['success' => true, 'message' => 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว']);
     }
 
     if ($method === 'GET' && $action === 'me') {
         requireLogin();
+        if (!empty($GLOBALS['northwind_api_v1'])) {
+            respond(['success' => true, 'data' => currentUser()]);
+        }
         if (!isset($_SESSION['csrf_token'])) {
             $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
         }
@@ -644,6 +949,9 @@ function handleApiRequest(): void
     }
 
     if ($method === 'POST' && $action === 'logout') {
+        if (!empty($GLOBALS['northwind_api_v1'])) {
+            respond(['success' => true, 'message' => 'Remove the token from the client to log out.']);
+        }
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
             $cookie = session_get_cookie_params();
@@ -666,6 +974,15 @@ function handleApiRequest(): void
     }
 
     if ($resource === 'orders') {
+        if ($method === 'PUT') {
+            updateOrder($id);
+        }
+        if ($method === 'PATCH') {
+            respond(['success' => false, 'message' => 'Order status and shipping dates are not stored in this database'], 422);
+        }
+        if ($method === 'DELETE') {
+            deleteOrder($id);
+        }
         if ($method === 'GET' && $id !== null) {
             if (!ctype_digit($id) || (int) $id < 1) {
                 respond(['success' => false, 'message' => 'เลขที่คำสั่งซื้อไม่ถูกต้อง'], 400);
@@ -712,7 +1029,7 @@ function handleApiRequest(): void
                                                    ORDER BY o.i_OrderID DESC');
             $statement->execute();
             $orders = $statement->fetchAll();
-            $search = trim((string) ($_GET['q'] ?? ''));
+            $search = trim((string) ($_GET['search'] ?? $_GET['q'] ?? ''));
             if ($search !== '') {
                 $needle = function_exists('mb_strtolower') ? mb_strtolower($search, 'UTF-8') : strtolower($search);
                 $orders = array_values(array_filter($orders, static function (array $order) use ($needle): bool {
@@ -739,6 +1056,16 @@ function handleApiRequest(): void
             }
             if ($to !== '') {
                 $orders = array_values(array_filter($orders, static fn(array $order): bool => $order['order_date'] <= $to));
+            }
+            if (!empty($GLOBALS['northwind_api_v1'])) {
+                $sort = strtolower((string) ($_GET['sort'] ?? 'desc')) === 'asc' ? 1 : -1;
+                usort($orders, static fn(array $left, array $right): int => ((int) $left['id'] <=> (int) $right['id']) * $sort);
+                $limit = min(100, max(1, (int) ($_GET['limit'] ?? 20)));
+                $total = count($orders);
+                $pages = max(1, (int) ceil($total / $limit));
+                $pageNumber = min(max(1, (int) ($_GET['page'] ?? 1)), $pages);
+                $GLOBALS['northwind_api_meta'] = ['page' => $pageNumber, 'limit' => $limit, 'total' => $total];
+                $orders = array_slice($orders, ($pageNumber - 1) * $limit, $limit);
             }
             respond(['success' => true, 'data' => $orders]);
         }
@@ -774,6 +1101,137 @@ function handleApiRequest(): void
         error_log('Northwind BMS API error: ' . $error->getMessage());
         respond(['success' => false, 'message' => 'เกิดข้อผิดพลาดในระบบ กรุณาลองอีกครั้ง'], 500);
     }
+}
+
+function handleV1Request(): void
+{
+    $GLOBALS['northwind_api_v1'] = true;
+    $GLOBALS['northwind_api_meta'] = null;
+    $uri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+    $path = (string) ($_GET['route'] ?? '');
+    if ($path === '') {
+        $position = strpos($uri, '/api/v1');
+        $path = $position === false ? trim($uri, '/') : trim(substr($uri, $position + strlen('/api/v1')), '/');
+    }
+    $path = trim(rawurldecode($path), '/');
+    $method = strtoupper((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'));
+    $_GET['id'] = $_GET['id'] ?? null;
+
+    if ($path === 'auth/status' && $method === 'GET') {
+        $statement = db()->prepare('SELECT COUNT(*) FROM users');
+        $statement->execute();
+        respond(['success' => true, 'data' => ['setup_required' => (int) $statement->fetchColumn() === 0]]);
+    }
+    if ($path === 'auth/setup' && $method === 'POST') {
+        $tokenConfig = jwtConfig();
+        $payload = requestBody();
+        $username = trim((string) ($payload['username'] ?? ''));
+        $password = (string) ($payload['password'] ?? '');
+        $displayName = trim((string) ($payload['display_name'] ?? ''));
+        if (!preg_match('/^[a-zA-Z0-9_.-]{3,50}$/', $username) || strlen($password) < 10 || $displayName === '') {
+            respond(['success' => false, 'message' => 'Provide a display name, valid username, and password of at least 10 characters'], 422);
+        }
+        $connection = db();
+        $connection->beginTransaction();
+        try {
+            $existing = $connection->prepare('SELECT id FROM users LIMIT 1 FOR UPDATE');
+            $existing->execute();
+            if ($existing->fetch()) {
+                $connection->rollBack();
+                respond(['success' => false, 'message' => 'Administrator setup is already complete'], 409);
+            }
+            $insert = $connection->prepare('INSERT INTO users (username, password_hash, display_name) VALUES (:username, :password_hash, :display_name)');
+            $insert->execute([
+                ':username' => $username,
+                ':password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                ':display_name' => $displayName,
+            ]);
+            $userId = (int) $connection->lastInsertId();
+            $connection->commit();
+            respond(['success' => true, 'data' => [
+                'token' => createJwt($userId),
+                'user' => ['id' => $userId, 'username' => $username, 'display_name' => $displayName, 'role' => 'admin'],
+            ]], 201);
+        } catch (Throwable $error) {
+            if ($connection->inTransaction()) {
+                $connection->rollBack();
+            }
+            throw $error;
+        }
+    }
+    if ($path === 'auth/register' && $method === 'POST') {
+        requireLogin();
+        $payload = requestBody();
+        $username = trim((string) ($payload['username'] ?? ''));
+        $password = (string) ($payload['password'] ?? '');
+        $displayName = trim((string) ($payload['display_name'] ?? ''));
+        if (!preg_match('/^[a-zA-Z0-9_.-]{3,50}$/', $username) || strlen($password) < 10 || $displayName === '') {
+            respond(['success' => false, 'message' => 'Provide a display name, valid username, and password of at least 10 characters'], 422);
+        }
+        try {
+            $insert = db()->prepare('INSERT INTO users (username, password_hash, display_name) VALUES (:username, :password_hash, :display_name)');
+            $insert->execute([
+                ':username' => $username,
+                ':password_hash' => password_hash($password, PASSWORD_DEFAULT),
+                ':display_name' => $displayName,
+            ]);
+        } catch (PDOException $error) {
+            if ($error->getCode() === '23000') {
+                respond(['success' => false, 'message' => 'Username is already in use'], 409);
+            }
+            throw $error;
+        }
+        respond(['success' => true, 'message' => 'Administrator account created', 'data' => [
+            'user' => ['id' => (int) db()->lastInsertId(), 'username' => $username, 'display_name' => $displayName, 'role' => 'admin'],
+        ]], 201);
+    }
+    if ($path === 'auth/login') {
+        $_GET['action'] = 'login';
+        handleApiRequest();
+    }
+    if ($path === 'auth/me') {
+        $_GET['action'] = 'me';
+        handleApiRequest();
+    }
+    if ($path === 'auth/change-password') {
+        $_GET['action'] = 'change-password';
+        handleApiRequest();
+    }
+    if ($path === 'auth/logout') {
+        $_GET['action'] = 'logout';
+        handleApiRequest();
+    }
+    if ($path === 'reports/summary') {
+        $_GET['resource'] = 'reports';
+        handleApiRequest();
+    }
+    if (preg_match('#^orders/([0-9]+)/items$#', $path, $matches)) {
+        $_GET['resource'] = 'order-details';
+        $_GET['order_id'] = $matches[1];
+        handleApiRequest();
+    }
+    if (preg_match('#^orders(?:/([0-9]+))?$#', $path, $matches)) {
+        $_GET['resource'] = 'orders';
+        if (isset($matches[1]) && $matches[1] !== '') {
+            $_GET['id'] = $matches[1];
+        } else {
+            unset($_GET['id']);
+        }
+        handleApiRequest();
+    }
+    if (preg_match('#^(products|categories|customers|suppliers|employees|shippers)(?:/([0-9]+))?$#', $path, $matches)) {
+        $_GET['resource'] = $matches[1];
+        if ($method === 'PATCH') {
+            $_SERVER['REQUEST_METHOD'] = 'PUT';
+        }
+        if (isset($matches[2]) && $matches[2] !== '') {
+            $_GET['id'] = $matches[2];
+        } else {
+            unset($_GET['id']);
+        }
+        handleApiRequest();
+    }
+    respond(['success' => false, 'message' => 'API endpoint not found'], 404);
 }
 
 final class ApiController
