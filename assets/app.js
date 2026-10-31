@@ -20,7 +20,7 @@
     });
   }
 
-  const apiUrl = new URL('../api/index.php', scriptUrl);
+  const apiUrl = new URL('../api/v1/', scriptUrl);
   const page = document.querySelector('.screen.active')?.id || '';
   const pageFiles = {
     login: 'login.html',
@@ -36,7 +36,7 @@
     shippers: 'shippers.html',
     reports: 'reports.html',
   };
-  const csrfToken = { value: '' };
+  const accessToken = { value: sessionStorage.getItem('northwind_access_token') || '' };
   const state = { records: [], filtered: [], pageNumber: 1, report: null, references: {} };
 
   const entityFields = {
@@ -102,23 +102,57 @@
     node.hideTimer = setTimeout(() => { node.hidden = true; }, 5000);
   }
 
+  function normalizeApiRecord(row, resource) {
+    if (!row || typeof row !== 'object' || Array.isArray(row)) return row;
+    const fields = {
+      products: { product_id: 'id', product_name: 'name', supplier_name: 'supplier', category_name: 'category', quantity_per_unit: 'unit', unit_price: 'price' },
+      categories: { category_id: 'id', category_name: 'name' },
+      customers: { customer_id: 'id', company_name: 'name', contact_name: 'contact' },
+      suppliers: { supplier_id: 'id', company_name: 'name', contact_name: 'contact' },
+      employees: { employee_id: 'id' },
+      shippers: { shipper_id: 'id', company_name: 'name' },
+      orders: { order_id: 'id', company_name: 'customer', employee_name: 'employee', ship_via: 'shipper_id', shipper_name: 'shipper' },
+    }[resource] || {};
+    const result = { ...row };
+    Object.entries(fields).forEach(([apiField, appField]) => {
+      if (Object.hasOwn(result, apiField)) {
+        result[appField] = result[apiField];
+        delete result[apiField];
+      }
+    });
+    return result;
+  }
+
   async function api(method, params = {}, body = null) {
-    const url = new URL(apiUrl);
+    let path;
+    if (params.action === 'login') path = 'auth/login';
+    else if (params.action === 'me') path = 'auth/me';
+    else if (params.action === 'logout') path = 'auth/logout';
+    else if (params.action === 'change-password') path = 'auth/change-password';
+    else if (params.resource === 'reports') path = 'reports/summary';
+    else if (params.resource === 'order-details') path = `orders/${encodeURIComponent(params.order_id || '')}/items`;
+    else if (params.resource) path = `${params.resource}${params.id ? `/${encodeURIComponent(params.id)}` : ''}`;
+    else throw new Error('ไม่พบ API endpoint ที่ต้องการ');
+
+    const url = new URL(path, apiUrl);
     Object.entries(params).forEach(([key, value]) => {
+      if (['resource', 'id', 'action', 'order_id'].includes(key)) return;
+      const queryKey = key === 'q' ? 'search' : key;
       if (value !== undefined && value !== null && value !== '') {
-        url.searchParams.set(key, String(value));
+        url.searchParams.set(queryKey, String(value));
       }
     });
     const headers = { Accept: 'application/json' };
     if (body !== null) headers['Content-Type'] = 'application/json';
-    if (method !== 'GET' && csrfToken.value) headers['X-CSRF-Token'] = csrfToken.value;
+    if (accessToken.value && params.action !== 'login') {
+      headers.Authorization = `Bearer ${accessToken.value}`;
+    }
 
     let response;
     try {
       response = await fetch(url, {
         method,
         headers,
-        credentials: 'same-origin',
         body: body === null ? undefined : JSON.stringify(body),
       });
     } catch (error) {
@@ -130,13 +164,38 @@
     } catch (error) {
       throw new Error(`API ตอบกลับไม่ถูกต้อง (HTTP ${response.status})`);
     }
-    if (!response.ok || result.success !== true) {
+    if (!response.ok || result.status !== true) {
       if (response.status === 401 && page !== 'login') {
+        accessToken.value = '';
+        sessionStorage.removeItem('northwind_access_token');
         window.location.replace(`login.html?next=${encodeURIComponent(window.location.pathname.split('/').pop() || 'dashboard.html')}`);
       }
       throw new Error(result.message || `คำขอไม่สำเร็จ (HTTP ${response.status})`);
     }
-    return result.data;
+    if (Array.isArray(result.data) && result.meta) {
+      const records = result.data.slice();
+      const totalPages = Math.ceil(Number(result.meta.total) / Number(result.meta.limit));
+      for (let pageNumber = 2; pageNumber <= totalPages; pageNumber += 1) {
+        const pageUrl = new URL(url);
+        pageUrl.searchParams.set('page', String(pageNumber));
+        const pageResponse = await fetch(pageUrl, { method, headers });
+        const pageResult = await pageResponse.json();
+        if (!pageResponse.ok || pageResult.status !== true || !Array.isArray(pageResult.data)) {
+          throw new Error(pageResult.message || `โหลดข้อมูลหน้าที่ ${pageNumber} ไม่สำเร็จ`);
+        }
+        records.push(...pageResult.data);
+      }
+      result.data = records;
+    }
+    let data = result.data;
+    if (Array.isArray(data)) {
+      data = data.map((record) => normalizeApiRecord(record, params.resource));
+    } else if (params.resource === 'orders' && data?.order) {
+      data = { ...normalizeApiRecord(data.order, 'orders'), items: data.items };
+    } else if (params.resource) {
+      data = normalizeApiRecord(data, params.resource);
+    }
+    return data;
   }
 
   function currentScreen() {
@@ -856,7 +915,8 @@
       try {
         const credentials = Object.fromEntries(new FormData(form).entries());
         const result = await api('POST', { action: 'login' }, credentials);
-        csrfToken.value = result.csrf_token;
+        accessToken.value = result.token;
+        sessionStorage.setItem('northwind_access_token', result.token);
         const next = new URLSearchParams(window.location.search).get('next');
         window.location.replace(pageFiles[next?.replace('.html', '')] || 'dashboard.html');
       } catch (error) {
@@ -924,6 +984,8 @@
     if (action === 'logout') {
       try {
         await api('POST', { action: 'logout' }, {});
+        accessToken.value = '';
+        sessionStorage.removeItem('northwind_access_token');
         window.location.replace('login.html');
       } catch (error) { notify(error.message, 'error'); }
       return;
@@ -999,21 +1061,14 @@
   async function start() {
     if (page === 'login') {
       await login();
-      try {
-        const session = await api('GET', { action: 'me' });
-        csrfToken.value = session.csrf_token;
-        window.location.replace('dashboard.html');
-      } catch (error) {
-        if (!error.message.includes('กรุณาเข้าสู่ระบบ')) notify(error.message, 'error');
-      }
       return;
     }
     if (!pageFiles[page]) return;
     try {
       const session = await api('GET', { action: 'me' });
-      csrfToken.value = session.csrf_token;
-      addLogoutButton(session.user);
-      updateSidebarUser(session.user);
+      const user = session.user || session;
+      addLogoutButton(user);
+      updateSidebarUser(user);
       bindGlobalSearch();
       addFilterListeners();
       document.addEventListener('click', (event) => {
