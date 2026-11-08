@@ -257,7 +257,21 @@ function requireCsrf(): void
 function currentUser(): array
 {
     if (!empty($GLOBALS['northwind_api_v1'])) {
-        $authorization = $_SERVER['HTTP_AUTHORIZATION'] ?? '';
+        $authorization = $_SERVER['HTTP_AUTHORIZATION']
+            ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+            ?? $_SERVER['HTTP_X_AUTHORIZATION']
+            ?? '';
+        if ($authorization === '' && function_exists('getallheaders')) {
+            $headers = getallheaders();
+            if (is_array($headers)) {
+                foreach ($headers as $name => $value) {
+                    if (strcasecmp((string) $name, 'Authorization') === 0 && is_string($value)) {
+                        $authorization = $value;
+                        break;
+                    }
+                }
+            }
+        }
         if (!preg_match('/^Bearer\s+([A-Za-z0-9._-]+)$/i', $authorization, $matches)) {
             respond(['success' => false, 'message' => 'Authorization Bearer token is required'], 401);
         }
