@@ -146,6 +146,7 @@
     if (body !== null) headers['Content-Type'] = 'application/json';
     if (accessToken.value && params.action !== 'login') {
       headers.Authorization = `Bearer ${accessToken.value}`;
+      headers['X-Authorization'] = `Bearer ${accessToken.value}`;
     }
 
     let response;
